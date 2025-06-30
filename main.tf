@@ -16,17 +16,14 @@ resource "random_string" "env_tag" {
 
 data "aws_availability_zones" "available" {}
 
-# VPC
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
 
-# Internet Gateway
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 }
 
-# Public Subnets
 resource "aws_subnet" "public" {
   count             = 2
   vpc_id            = aws_vpc.main.id
@@ -34,7 +31,6 @@ resource "aws_subnet" "public" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
 }
 
-# Route Table for Public Subnets
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
 
@@ -44,14 +40,12 @@ resource "aws_route_table" "public_rt" {
   }
 }
 
-# Associate Route Table with Public Subnets
 resource "aws_route_table_association" "public" {
   count          = length(aws_subnet.public)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public_rt.id
 }
 
-# Security Group
 resource "aws_security_group" "lb_sg" {
   name        = "lb-sg"
   description = "Allow HTTP"
@@ -72,10 +66,36 @@ resource "aws_security_group" "lb_sg" {
   }
 }
 
-# S3 Bucket for Logs
+# S3 Bucket for ALB Logs
 resource "aws_s3_bucket" "lb_logs" {
   bucket        = "alb-access-logs-${random_string.log_prefix.result}"
   force_destroy = true
+  acl           = "private"
+}
+
+# ✅ S3 Bucket Policy for ALB access logs
+resource "aws_s3_bucket_policy" "lb_logs_policy" {
+  bucket = aws_s3_bucket.lb_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AWSLoadBalancerLogs"
+        Effect    = "Allow"
+        Principal = {
+          Service = "logdelivery.elasticloadbalancing.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.lb_logs.arn}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  })
 }
 
 # Load Balancer
