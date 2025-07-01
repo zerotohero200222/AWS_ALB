@@ -101,15 +101,3 @@ After deployment, Terraform will output:
 
 ---
 
-## 📚 Useful References
-
-* [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-* [AWS ALB Docs](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html)
-* [GitHub Actions Terraform](https://github.com/hashicorp/setup-terraform)
-
-```
-
----
-
-Let me know if you'd like the README tailored for a different cloud (e.g., Azure/GCP), module-style deployment, or for use with a remote backend (e.g., S3 + DynamoDB for state).
-```
