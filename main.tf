@@ -1,7 +1,3 @@
-resource "random_pet" "lb_name" {
-  length = 2
-}
-
 resource "random_string" "log_prefix" {
   length  = 8
   special = false
@@ -66,28 +62,26 @@ resource "aws_security_group" "lb_sg" {
   }
 }
 
-# S3 Bucket for ALB Logs
 resource "aws_s3_bucket" "lb_logs" {
   bucket        = "alb-access-logs-${random_string.log_prefix.result}"
   force_destroy = true
   acl           = "private"
 }
 
-# ✅ S3 Bucket Policy for ALB access logs
 resource "aws_s3_bucket_policy" "lb_logs_policy" {
   bucket = aws_s3_bucket.lb_logs.id
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Sid       = "AWSLoadBalancerLogs"
-        Effect    = "Allow"
+        Sid = "AWSLoadBalancerLogs",
+        Effect = "Allow",
         Principal = {
           Service = "logdelivery.elasticloadbalancing.amazonaws.com"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.lb_logs.arn}/*"
+        },
+        Action = "s3:PutObject",
+        Resource = "${aws_s3_bucket.lb_logs.arn}/*",
         Condition = {
           StringEquals = {
             "s3:x-amz-acl" = "bucket-owner-full-control"
@@ -98,15 +92,14 @@ resource "aws_s3_bucket_policy" "lb_logs_policy" {
   })
 }
 
-# Load Balancer
 resource "aws_lb" "test" {
-  name               = "${random_pet.lb_name.id}-alb"
+  name               = "alb-${random_string.env_tag.result}"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.lb_sg.id]
   subnets            = [for subnet in aws_subnet.public : subnet.id]
 
-  enable_deletion_protection = true
+  enable_deletion_protection = false
 
   access_logs {
     bucket  = aws_s3_bucket.lb_logs.id
@@ -115,6 +108,6 @@ resource "aws_lb" "test" {
   }
 
   tags = {
-    Environment = random_string.env_tag.result
+    Environment = var.env
   }
 }
